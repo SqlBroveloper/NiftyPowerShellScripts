@@ -1,0 +1,34 @@
+function Get-Scripts_v2(
+<####################################################################
+Author: Alex Fleming
+Created On: 05/10/2018
+Description: Added Test-Path, removed file limit, simplified the
+script by replacing "Where-Object" with the "Filter" method in 
+Get-ChildItem, and removed the filter that excludes folders from
+running the script without recursion.
+####################################################################>
+    [string]$Directory, 
+    [string]$Criteria,
+    [int16]$RecursionFlag
+    )
+{
+    If(Test-Path $Directory)
+    {
+        Set-Location -Path $Directory;
+
+        ###_Add a switch to turn recurision on/off_###
+        If($RecursionFlag -eq 1)
+        {
+            Get-ChildItem -Filter "*$Criteria*" -Recurse
+        }
+        ElseIf ($RecursionFlag -eq 0)
+        {
+            Get-ChildItem -Filter "*$Criteria*"        
+        }
+    }
+    Else
+    {
+        Write-Host{"The directory you specified is invalid.  Please enter a valid directory."}
+    }
+}
+
