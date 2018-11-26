@@ -1,0 +1,29 @@
+
+##Note: I'm currently working on creating an advanced function for this, but in the meantime use the script below 
+
+### Just return a list of stored procedure names and line numbers
+### so that you know which line each definition begins on
+$Directory = "C:\Users\alexa\Documents\Demo\SQLServerMetadataDemos";
+$FileName = "AdventureWorks2014_StoredProcedureDefinitions_2018.rpt";
+$FilePath = "$Directory\$FileName";
+$Criteria1 = "CREATE PROCEDURE";
+
+Set-Location $Directory;
+
+Get-Content -LiteralPath "$FilePath" |
+Select-String -Pattern $Criteria1 |
+Select-Object -Property LineNumber, Line  |
+Format-Table -AutoSize;
+
+### Search for a column that you would like to examine in terms
+### of its relationship to other stored procedures
+$Directory = "C:\Users\alexa\Documents\Demo\SQLServerMetadataDemos";
+$FileName = "AdventureWorks2014_StoredProcedureDefinitions_2018.rpt";
+$FilePath = "$Directory\$FileName";
+$Criteria1 = "CREATE PROCEDURE";
+$Criteria2 = "businessentityid";
+
+Get-Content -LiteralPath "$FilePath" |
+Select-String -Pattern $Criteria1,$Criteria2 |
+Select-Object -Property LineNumber,Line |
+Format-Table -AutoSize;
