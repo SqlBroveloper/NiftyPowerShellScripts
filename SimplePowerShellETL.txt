@@ -1,0 +1,114 @@
+<# 
+Make sure that you are running on Windows 10 or Windows Server 2016
+(this script was developed on a Windows 10 machine)
+
+If you do not have the SqlServer module installed, then open a powershell session as an administrator and run this command:
+
+Install-Module -Name SqlServer -AllowClobber;
+
+or follow the instructions here:
+
+https://docs.microsoft.com/en-us/sql/powershell/download-sql-server-ps-module?view=sql-server-ver15
+#>
+
+<# You need to make sure the SqlServer module is available in the session #>
+If(
+    ((Get-Module -Name SqlServer).Count -eq 0) -and
+    (Get-Module -Name SqlServer -ListAvailable).Count -gt 0
+)
+{
+    "Importing the SqlServer module...";
+    Import-Module -Name SqlServer -Force;
+};
+
+# find all indexed views in a database and display the names:
+[string]$InstanceName = $ENV:COMPUTERNAME;
+[string]$ServerObjectType = 'Databases';
+[string]$DatabaseName = 'StackOverFlow2013';
+[string]$DBObjectType = 'Views';
+
+Set-Location "SQLSERVER:\SQL\$InstanceName\DEFAULT\$ServerObjectType\$DatabaseName\$DBObjectType";
+
+# store the view db objects in an array
+$Views = Get-ChildItem;
+
+$InstanceName = $env:COMPUTERNAME;
+$DatabaseName = 'StackOverFlow2013';
+[string]$Query = @"
+    INSERT INTO dbo.IndexedViewMetadata (
+        [Owner],
+        [Name],
+        [CreateDate],
+        [DateLastModified],
+        [AnsiNullsStatus])
+    VALUES
+"@;
+
+$InsertStatement = New-Object System.Text.StringBuilder;
+
+$null = $InsertStatement.Append($Query);
+
+<# Check out the properties available
+ForEach($view in $Views)
+{
+    $view | Get-Member -MemberType Property;
+    break;
+};
+#>
+
+ForEach($view in $Views)
+{
+    $null = $InsertStatement.Append("(");
+
+    # NOTE: Order matters here - it must be the same as the INSERT INTO clause
+    $ViewProperties = @(
+        $view.Owner,
+        $view.Name,
+        $view.CreateDate,
+        $view.DateLastModified,
+        $view.AnsiNullsStatus
+    );
+
+
+    ForEach($property in $ViewProperties)
+    {
+        If($property.GetType().Name -eq 'boolean')
+        {
+            If($property -eq $true)
+            {
+                $null = $InsertStatement.Append("1,`n");
+            }
+            Else
+            {
+                $null = $InsertStatement.Append("0,`n");
+            };
+        };
+
+        If($property.GetType().Name -eq 'string')
+        {
+            $property = $property.Replace("'","''");
+            $null = $InsertStatement.Append("'$property',`n");
+        };
+    
+        If($property.GetType().Name -inotin ('string','boolean'))
+        {
+            $null = $InsertStatement.Append("'$property',`n");
+        };
+    };
+    $null = $InsertStatement.Remove($InsertStatement.ToString().LastIndexOf(','),1);
+    $null = $InsertStatement.Append("),`n");
+};
+
+$null = $InsertStatement.Remove($InsertStatement.ToString().LastIndexOf('),'),2);
+$null = $InsertStatement.Append(");");
+
+$InsertStatement.ToString();
+
+Invoke-Sqlcmd -ServerInstance $InstanceName `
+    -Database $DatabaseName `
+    -Query $InsertStatement.ToString() `
+    -SuppressProviderContextWarning `
+    -ConnectionTimeout 10 `
+    -IncludeSqlUserErrors;
+
+
